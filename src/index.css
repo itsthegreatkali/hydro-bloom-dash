@@ -2,41 +2,65 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
+/* Hydroponic Farm Monitoring Dashboard Design System
+   Mellow farming color palette for agricultural monitoring
+   All colors MUST be HSL.
 */
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Base farming color palette */
+    --background: 46 56% 96%; /* Soft Beige #F5F0E1 */
+    --foreground: 31 16% 36%; /* Soil Brown #A89F91 for text */
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card: 0 0% 98%; /* Muted White #F8F9FA */
+    --card-foreground: 31 16% 36%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 98%;
+    --popover-foreground: 31 16% 36%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    /* Primary: Earthy Green for main actions */
+    --primary: 81 42% 48%; /* Earthy Green #88B04B */
+    --primary-foreground: 0 0% 98%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    /* Secondary: Sky Blue for water-related elements */
+    --secondary: 186 51% 75%; /* Sky Blue #A8DADC */
+    --secondary-foreground: 31 16% 36%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    /* Muted: Soft beige tones */
+    --muted: 46 56% 94%;
+    --muted-foreground: 31 16% 50%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    /* Accent: Yellow for alerts and highlights */
+    --accent: 46 100% 69%; /* Accent Yellow #FFD166 */
+    --accent-foreground: 31 16% 36%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    /* Status colors for monitoring */
+    --success: 81 42% 48%; /* Green for normal levels */
+    --warning: 46 100% 69%; /* Yellow for warnings */
+    --destructive: 0 84% 60%; /* Red for critical alerts */
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    /* UI elements */
+    --border: 46 56% 88%;
+    --input: 46 56% 90%;
+    --ring: 81 42% 48%;
 
-    --radius: 0.5rem;
+    /* Design tokens */
+    --radius: 0.75rem;
+    
+    /* Gradients for visual appeal */
+    --gradient-primary: linear-gradient(135deg, hsl(81 42% 48%), hsl(81 42% 55%));
+    --gradient-water: linear-gradient(180deg, hsl(186 51% 75%), hsl(186 51% 85%));
+    --gradient-earth: linear-gradient(135deg, hsl(31 16% 36%), hsl(31 16% 45%));
+    
+    /* Shadows */
+    --shadow-soft: 0 4px 12px -4px hsl(31 16% 36% / 0.1);
+    --shadow-medium: 0 8px 24px -8px hsl(31 16% 36% / 0.15);
+    
+    /* Animations */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 
     --sidebar-background: 0 0% 98%;
 
