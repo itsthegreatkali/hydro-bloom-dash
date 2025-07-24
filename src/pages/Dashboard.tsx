@@ -2,21 +2,27 @@ import { useState, useEffect } from 'react';
 import DashboardHeader from '@/components/DashboardHeader';
 import ECMonitorCard from '@/components/ECMonitorCard';
 import WaterLevelCard from '@/components/WaterLevelCard';
+import ThresholdSettings from '@/components/ThresholdSettings';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, Settings, Download } from 'lucide-react';
+import { RefreshCw, Download, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
-// Sample data generator for demonstration
+// More realistic EC data generator (1.0 - 2.4 range)
 const generateECData = () => {
   const now = new Date();
   const data = [];
   
   for (let i = 23; i >= 0; i--) {
     const time = new Date(now.getTime() - i * 60 * 60 * 1000);
-    const value = 1.2 + Math.random() * 0.8 + Math.sin(i * 0.3) * 0.3;
+    // More realistic EC range (1.0 - 2.4) with natural variations
+    const baseValue = 1.7; // Target around 1.7
+    const hourlyVariation = Math.sin(i * 0.1) * 0.3; // Gradual changes over time
+    const randomNoise = (Math.random() - 0.5) * 0.2; // Small random fluctuations
+    const value = baseValue + hourlyVariation + randomNoise;
+    
     data.push({
       time: time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-      value: Math.max(0.5, Math.min(2.5, value))
+      value: Math.max(1.0, Math.min(2.4, value)) // Constrain to 1.0-2.4 range
     });
   }
   
@@ -25,23 +31,30 @@ const generateECData = () => {
 
 const Dashboard = () => {
   const [ecData, setECData] = useState(generateECData());
-  const [currentEC, setCurrentEC] = useState(1.6);
+  const [currentEC, setCurrentEC] = useState(1.7);
   const [waterLevel, setWaterLevel] = useState(78);
   const [lastUpdate, setLastUpdate] = useState(new Date());
   const [isOnline, setIsOnline] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [ecThreshold, setECThreshold] = useState({ min: 1.2, max: 2.0 });
+  const [alarmAcknowledged, setAlarmAcknowledged] = useState(false);
   const { toast } = useToast();
 
-  // Simulate real-time data updates
+  // Check if current EC is in alarm state
+  const isECAlarm = currentEC < ecThreshold.min || currentEC > ecThreshold.max;
+
+  // Simulate real-time data updates with more realistic EC variations
   useEffect(() => {
     const interval = setInterval(() => {
-      // Simulate slight variations in EC
-      const newEC = currentEC + (Math.random() - 0.5) * 0.1;
-      setCurrentEC(Math.max(0.5, Math.min(2.5, newEC)));
+      // More realistic EC variations (1.0-2.4 range)
+      const variation = (Math.random() - 0.5) * 0.15; // Smaller variations for realism
+      const newEC = Math.max(1.0, Math.min(2.4, currentEC + variation));
+      setCurrentEC(newEC);
       
       // Simulate gradual water level changes
-      const newLevel = waterLevel + (Math.random() - 0.5) * 2;
-      setWaterLevel(Math.max(0, Math.min(100, newLevel)));
+      const levelVariation = (Math.random() - 0.5) * 1.5; // Slower water level changes
+      const newLevel = Math.max(0, Math.min(100, waterLevel + levelVariation));
+      setWaterLevel(newLevel);
       
       // Update data array
       const newDataPoint = {
@@ -52,12 +65,29 @@ const Dashboard = () => {
       setECData(prev => [...prev.slice(1), newDataPoint]);
       setLastUpdate(new Date());
       
+      // Reset alarm acknowledgment if EC returns to normal
+      if (!isECAlarm) {
+        setAlarmAcknowledged(false);
+      }
+      
       // Simulate occasional connection issues
-      setIsOnline(Math.random() > 0.05);
+      setIsOnline(Math.random() > 0.02);
     }, 10000); // Update every 10 seconds
 
     return () => clearInterval(interval);
-  }, [currentEC, waterLevel]);
+  }, [currentEC, waterLevel, isECAlarm]);
+
+  // Show alarm toast when EC goes out of range
+  useEffect(() => {
+    if (isECAlarm && !alarmAcknowledged) {
+      const alarmType = currentEC < ecThreshold.min ? 'below' : 'above';
+      toast({
+        title: "EC ALARM",
+        description: `EC level is ${alarmType} threshold (${currentEC.toFixed(1)} mS/cm)`,
+        variant: "destructive",
+      });
+    }
+  }, [isECAlarm, alarmAcknowledged, currentEC, ecThreshold, toast]);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -65,7 +95,7 @@ const Dashboard = () => {
     // Simulate API call delay
     setTimeout(() => {
       setECData(generateECData());
-      setCurrentEC(1.2 + Math.random() * 0.8);
+      setCurrentEC(1.4 + Math.random() * 0.6); // Random realistic EC value
       setWaterLevel(50 + Math.random() * 40);
       setLastUpdate(new Date());
       setIsRefreshing(false);
@@ -78,20 +108,76 @@ const Dashboard = () => {
   };
 
   const handleDownload = () => {
+    // Create CSV data
+    const csvData = [
+      ['Timestamp', 'EC (mS/cm)', 'Water Level (%)'],
+      ...ecData.map((point, index) => [
+        point.time,
+        point.value.toFixed(2),
+        (waterLevel + (Math.random() - 0.5) * 5).toFixed(1) // Simulate historical water levels
+      ])
+    ];
+    
+    const csvContent = csvData.map(row => row.join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `hydroponic-data-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+    
     toast({
-      title: "Download started",
-      description: "Exporting data as CSV file...",
+      title: "Download complete",
+      description: "Data exported successfully as CSV file.",
+    });
+  };
+
+  const handleThresholdUpdate = (newRange: { min: number; max: number }) => {
+    setECThreshold(newRange);
+    setAlarmAcknowledged(false); // Reset acknowledgment with new thresholds
+  };
+
+  const handleAlarmAcknowledge = () => {
+    setAlarmAcknowledged(true);
+    toast({
+      title: "Alarm acknowledged",
+      description: "EC alarm has been acknowledged by operator.",
     });
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/30 p-4 sm:p-6">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/30 p-4 sm:p-6 font-sans">
       <div className="max-w-6xl mx-auto space-y-6">
         <DashboardHeader
           farmName="GreenGrow NFT Farm"
           lastUpdate={lastUpdate}
           isOnline={isOnline}
         />
+        
+        {/* Global alarm indicator */}
+        {isECAlarm && !alarmAcknowledged && (
+          <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 animate-pulse">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="h-6 w-6 text-destructive animate-bounce" />
+                <div>
+                  <h3 className="font-semibold text-destructive">SYSTEM ALARM</h3>
+                  <p className="text-sm text-destructive/80">
+                    EC level is {currentEC < ecThreshold.min ? 'below' : 'above'} acceptable range
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleAlarmAcknowledge}
+              >
+                Acknowledge Alarm
+              </Button>
+            </div>
+          </div>
+        )}
         
         {/* Action buttons */}
         <div className="flex flex-wrap gap-3 justify-end">
@@ -105,14 +191,11 @@ const Dashboard = () => {
             Export Data
           </Button>
           
-          <Button
-            variant="outline"
-            size="sm"
-            className="bg-card/50 backdrop-blur-sm"
-          >
-            <Settings className="h-4 w-4" />
-            Settings
-          </Button>
+          <ThresholdSettings
+            currentRange={ecThreshold}
+            onRangeUpdate={handleThresholdUpdate}
+            unit="mS/cm"
+          />
           
           <Button
             variant="default"
@@ -132,7 +215,8 @@ const Dashboard = () => {
             currentEC={currentEC}
             data={ecData}
             unit="mS/cm"
-            optimalRange={{ min: 1.2, max: 2.0 }}
+            optimalRange={ecThreshold}
+            onAlarmAcknowledge={handleAlarmAcknowledge}
           />
           
           <WaterLevelCard
@@ -146,9 +230,13 @@ const Dashboard = () => {
         <div className="bg-card/70 backdrop-blur-sm rounded-lg p-4 border border-border/50">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 text-sm text-muted-foreground">
             <div className="flex items-center gap-4">
-              <span>System Status: {isOnline ? 'Online' : 'Offline'}</span>
+              <span className={isECAlarm ? 'text-destructive font-medium' : ''}>
+                System Status: {isECAlarm ? 'ALARM' : isOnline ? 'Online' : 'Offline'}
+              </span>
               <span>•</span>
               <span>Auto-refresh: Every 10s</span>
+              <span>•</span>
+              <span>EC Range: {ecThreshold.min} - {ecThreshold.max} mS/cm</span>
             </div>
             
             <div className="flex items-center gap-4">
